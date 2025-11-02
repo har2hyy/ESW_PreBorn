@@ -1,0 +1,14 @@
+# Set the path to your dataset's root directory
+path: /home/harshyy/Desktop/ESW/data
+
+# Directories for training and validation images (relative to the 'path' above)
+train: train/images
+val: val/images
+
+# Class names in the correct order
+names:
+  0: worker
+  1: truck
+  2: bike
+  3: bulldozer
+  4: car
