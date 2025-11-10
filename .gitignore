@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Android/Gradle
+*.iml
+.gradle
+/local.properties
+/.idea/workspace.xml
+/.idea/libraries
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+
+# Android build outputs
+*/build/
+**/build/
+*.apk
+*.ap_
+*.aab
+
+# Specific exclusions for Android app
+VisionSolution1-ObjectDetection-YoloNas/app/build/
+VisionSolution1-ObjectDetection-YoloNas/app/release/
+VisionSolution1-ObjectDetection-YoloNas/.gradle/
+VisionSolution1-ObjectDetection-YoloNas/local.properties
+
+# YOLO artifacts
+YOLO/__pycache__/

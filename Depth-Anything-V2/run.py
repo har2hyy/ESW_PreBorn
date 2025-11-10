@@ -56,7 +56,13 @@ if __name__ == '__main__':
         
         depth = depth_anything.infer_image(raw_image, args.input_size)
         
-        depth = (depth - depth.min()) / (depth.max() - depth.min()) * 255.0
+        # Apply logarithmic scaling for better depth perception
+        # Add small epsilon to avoid log(0)
+        epsilon = 1e-6
+        depth_log = np.log1p(depth - depth.min() + epsilon)  # log1p(x) = log(1+x)
+        
+        # Normalize logarithmic depth to 0-255 range
+        depth = (depth_log - depth_log.min()) / (depth_log.max() - depth_log.min()) * 255.0
         depth = depth.astype(np.uint8)
         
         if args.grayscale:
