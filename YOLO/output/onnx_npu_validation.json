@@ -1,0 +1,151 @@
+{
+  "model": "runs/detect/train/weights/best.onnx",
+  "image": "/home/harshyy/Desktop/20250103_104457.jpg",
+  "inference_time_ms": 167.12355613708496,
+  "config": {
+    "img_size": 1024,
+    "conf_threshold": 0.25,
+    "iou_threshold": 0.45
+  },
+  "summary": {
+    "total_detections": 11,
+    "by_class": {
+      "worker": 9,
+      "truck": 2
+    }
+  },
+  "detections": [
+    {
+      "id": 1,
+      "class": "worker",
+      "class_id": 0,
+      "confidence": 0.7546073198318481,
+      "bbox": [
+        1882,
+        620,
+        1908,
+        655
+      ]
+    },
+    {
+      "id": 2,
+      "class": "worker",
+      "class_id": 0,
+      "confidence": 0.6793420314788818,
+      "bbox": [
+        1217,
+        926,
+        1247,
+        972
+      ]
+    },
+    {
+      "id": 3,
+      "class": "worker",
+      "class_id": 0,
+      "confidence": 0.6783695816993713,
+      "bbox": [
+        1472,
+        463,
+        1496,
+        487
+      ]
+    },
+    {
+      "id": 4,
+      "class": "worker",
+      "class_id": 0,
+      "confidence": 0.6571169495582581,
+      "bbox": [
+        584,
+        470,
+        603,
+        495
+      ]
+    },
+    {
+      "id": 5,
+      "class": "worker",
+      "class_id": 0,
+      "confidence": 0.6000702381134033,
+      "bbox": [
+        88,
+        632,
+        113,
+        664
+      ]
+    },
+    {
+      "id": 6,
+      "class": "worker",
+      "class_id": 0,
+      "confidence": 0.5565017461776733,
+      "bbox": [
+        1454,
+        422,
+        1475,
+        451
+      ]
+    },
+    {
+      "id": 7,
+      "class": "worker",
+      "class_id": 0,
+      "confidence": 0.5175749063491821,
+      "bbox": [
+        705,
+        551,
+        728,
+        578
+      ]
+    },
+    {
+      "id": 8,
+      "class": "truck",
+      "class_id": 1,
+      "confidence": 0.5000646114349365,
+      "bbox": [
+        892,
+        407,
+        975,
+        457
+      ]
+    },
+    {
+      "id": 9,
+      "class": "truck",
+      "class_id": 1,
+      "confidence": 0.3481833338737488,
+      "bbox": [
+        1254,
+        328,
+        1351,
+        367
+      ]
+    },
+    {
+      "id": 10,
+      "class": "worker",
+      "class_id": 0,
+      "confidence": 0.33467769622802734,
+      "bbox": [
+        1142,
+        434,
+        1165,
+        459
+      ]
+    },
+    {
+      "id": 11,
+      "class": "worker",
+      "class_id": 0,
+      "confidence": 0.28843414783477783,
+      "bbox": [
+        1486,
+        400,
+        1503,
+        424
+      ]
+    }
+  ]
+}

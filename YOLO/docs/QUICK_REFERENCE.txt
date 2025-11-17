@@ -1,0 +1,154 @@
+================================================================================
+  QIDK NPU DEPLOYMENT - QUICK REFERENCE CARD
+================================================================================
+
+📋 PREREQUISITES
+  □ SNPE SDK installed: export SNPE_ROOT=/path/to/snpe
+  □ QIDK connected: adb devices
+  □ Files ready: best_simplified.onnx, calibration_list.txt
+
+🚀 THREE-COMMAND DEPLOYMENT
+  
+  1. Convert ONNX → DLC
+     $ ./convert_to_dlc.sh
+     
+  2. Setup QIDK Device
+     $ ./setup_qidk_device.sh
+     
+  3. Run on NPU
+     $ ./remote_npu_pipeline.py --image photo.jpg --dlc best_yolo_int8.dlc
+
+================================================================================
+
+📂 KEY FILES
+
+  Input:
+    runs/detect/train/weights/best_simplified.onnx  (ONNX model)
+    calibration_list.txt                            (150 images)
+  
+  Output:
+    runs/detect/train/weights/best_yolo_fp32.dlc    (FP32, ~10 MB)
+    runs/detect/train/weights/best_yolo_int8.dlc    (INT8, ~2-3 MB) ⭐
+  
+  Scripts:
+    convert_to_dlc.sh          - Automated conversion
+    test_dlc_on_pc.py          - Test on PC (no NPU needed)
+    remote_npu_pipeline.py     - Run on QIDK from PC
+    setup_qidk_device.sh       - One-time QIDK setup
+
+================================================================================
+
+⚙️  MANUAL CONVERSION (if needed)
+
+  Step 1: ONNX → FP32 DLC
+    $ snpe-onnx-to-dlc \
+        --input_network best_simplified.onnx \
+        --output_path best_yolo_fp32.dlc \
+        --input_dim images 1,3,1024,1024
+
+  Step 2: FP32 → INT8 DLC
+    $ snpe-dlc-quantize \
+        --input_dlc best_yolo_fp32.dlc \
+        --output_dlc best_yolo_int8.dlc \
+        --input_list calibration_list.txt \
+        --enable_htp \
+        --use_enhanced_quantizer
+
+  Step 3: Verify
+    $ snpe-dlc-info --input_dlc best_yolo_int8.dlc
+
+================================================================================
+
+🧪 TESTING OPTIONS
+
+  Option 1: Test on PC (CPU)
+    $ python test_dlc_on_pc.py best_yolo_int8.dlc
+    → No NPU required
+    → Expected: ~11 detections, 300-500ms
+  
+  Option 2: Test on QIDK NPU
+    $ ./remote_npu_pipeline.py \
+        --image test.jpg \
+        --dlc best_yolo_int8.dlc \
+        --runtime dsp
+    → NPU required
+    → Expected: 9-11 detections, 50-100ms ⚡
+
+================================================================================
+
+🎮 RUNTIME OPTIONS
+
+  --runtime dsp   → NPU/HTP (fastest, 50-100ms) ⭐ RECOMMENDED
+  --runtime gpu   → GPU (medium, 150-200ms)
+  --runtime cpu   → CPU (slowest, 300-500ms)
+
+================================================================================
+
+📊 EXPECTED PERFORMANCE
+
+  Runtime          Device      Speed        Detections   Power
+  ─────────────────────────────────────────────────────────────
+  ONNX FP32        PC CPU      ~250ms       11           High
+  DLC INT8         PC CPU      ~300ms       9-11         High
+  DLC INT8         QIDK NPU    ~50-100ms ⚡  9-11         Low 🔋
+
+================================================================================
+
+🔧 TROUBLESHOOTING
+
+  Issue: snpe-onnx-to-dlc not found
+  Fix:   export PATH=$SNPE_ROOT/bin/x86_64-linux-clang:$PATH
+
+  Issue: adb device not found
+  Fix:   adb kill-server && adb start-server && adb devices
+
+  Issue: Low INT8 accuracy
+  Fix:   Increase calibration images (300+)
+         find . -name '*.jpg' | head -n 300 > calibration_list.txt
+
+  Issue: NPU execution fails
+  Fix:   Try GPU first: --runtime gpu
+         Check logs: adb logcat | grep SNPE
+
+================================================================================
+
+📚 DOCUMENTATION
+
+  Complete Guide:    COMPLETE_NPU_DEPLOYMENT.md
+  Workflow Summary:  NPU_WORKFLOW_SUMMARY.md
+  Conversion Guide:  DLC_CONVERSION_GUIDE.md
+  Deployment Checklist: NPU_DEPLOYMENT_CHECKLIST.md
+
+================================================================================
+
+✅ VALIDATION CHECKLIST
+
+  □ FP32 DLC matches ONNX (~11 detections)
+  □ INT8 DLC achieves 95%+ accuracy (9-11 detections)
+  □ NPU inference < 100ms
+  □ Bounding boxes visually correct
+  □ No errors in logs
+
+================================================================================
+
+🎯 PRODUCTION WORKFLOW
+
+  1. Convert once:     ./convert_to_dlc.sh
+  2. Setup device once: ./setup_qidk_device.sh
+  3. Process images:   ./remote_npu_pipeline.py --image img.jpg --dlc model.dlc
+
+  For batch:
+    for img in *.jpg; do
+        ./remote_npu_pipeline.py --image "$img" --dlc best_yolo_int8.dlc
+    done
+
+================================================================================
+
+📞 QUICK HELP
+
+  List scripts:      ls -lh *.sh *.py
+  Test connection:   adb devices
+  Check SNPE:        echo $SNPE_ROOT
+  View model info:   snpe-dlc-info --input_dlc model.dlc
+
+================================================================================

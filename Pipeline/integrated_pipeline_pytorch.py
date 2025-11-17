@@ -150,6 +150,7 @@ class IntegratedPipelinePyTorch:
         print("[Stage 1/5] Running YOLO Object Detection...")
         results = self.yolo.predict(
             image_path,
+            imgsz=1024,  # Model was trained with imgsz=1024
             conf=self.conf_threshold,
             iou=self.iou_threshold,
             verbose=False

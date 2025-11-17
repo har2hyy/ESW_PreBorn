@@ -37,3 +37,5 @@ VisionSolution1-ObjectDetection-YoloNas/local.properties
 
 # YOLO artifacts
 YOLO/__pycache__/
+# Large calibration files (can be regenerated)
+YOLO/calibration/calibration_raw/*.raw
