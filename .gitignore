@@ -40,3 +40,8 @@ YOLO/__pycache__/
 # Large calibration files (can be regenerated)
 YOLO/calibration/calibration_raw/*.raw
 depth_perception_camera_swayam/depth_anything_v2.tflite
+
+# Large training dataset (use Git LFS or exclude)
+YOLO/data_1-300/1_300_manual_images/*.jpg
+# Large dataset folder (300 images + labels, ~212 MB)
+YOLO/data_1-300/
