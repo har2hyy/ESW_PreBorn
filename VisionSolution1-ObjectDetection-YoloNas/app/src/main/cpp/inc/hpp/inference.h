@@ -3,10 +3,6 @@
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 //============================================================================
 
-//
-// Created by shubpate on 12/11/2021.
-//
-
 #ifndef NATIVEINFERENCE_INFERENCE_H
 #define NATIVEINFERENCE_INFERENCE_H
 
@@ -39,31 +35,18 @@
 #define  LOG_TAG    "SNPE_INF"
 #define  LOGI(...)  __android_log_print(ANDROID_LOG_INFO,LOG_TAG,__VA_ARGS__)
 #define  LOGE(...)  __android_log_print(ANDROID_LOG_ERROR,LOG_TAG,__VA_ARGS__)
+#define  LOGW(...)  __android_log_print(ANDROID_LOG_WARN,LOG_TAG,__VA_ARGS__)
 
-class BoxCornerEncoding {
+std::string build_depth_network(const uint8_t * dlc_buffer, const size_t dlc_size, const char runtime_arg);
+bool execute_depth(cv::Mat &rgbaImage, int orig_width, int orig_height,
+                   std::vector<float> &normalizedDepth,
+                   float &minValue, float &maxValue);
 
-public:
-    int x1;
-    int y1;
-    int x2;
-    int y2;
-    float score;
-    std::string objlabel;
-
-    BoxCornerEncoding(int a, int b, int c, int d,int sc, std::string name="person")
-    {
-        x1 = a;
-        y1 = b;
-        x2 = c;
-        y2 = d;
-        score = sc;
-        objlabel = name;
-    }
-};
-
-std::string build_network_BB(const uint8_t * dlc_buffer, const size_t dlc_size, const char runtime_arg);
 bool SetAdspLibraryPath(std::string nativeLibPath);
 
-bool executeDLC(cv::Mat &img, int orig_width, int orig_height, int &numberofhuman, std::vector<std::vector<float>> &BB_coords, std::vector<std::string> &BB_names);
+int getDepthInputWidth();
+int getDepthInputHeight();
+int getDepthOutputWidth();
+int getDepthOutputHeight();
 
 #endif //NATIVEINFERENCE_INFERENCE_H

@@ -348,9 +348,10 @@ public class CameraFragment extends Fragment {
                                                                     int screenWidth, int screenHeight) {
         ArrayList<RectangleBox> boxes = new ArrayList<>();
         
-        // Scale factors from model input size to screen size
-        float scaleX = (float) screenWidth / TFLiteRunner.getModelInputW();
-        float scaleY = (float) screenHeight / TFLiteRunner.getModelInputH();
+    float modelInputWidth = tfliteRunner != null ? tfliteRunner.getActualInputWidth() : TFLiteRunner.getModelInputW();
+    float modelInputHeight = tfliteRunner != null ? tfliteRunner.getActualInputHeight() : TFLiteRunner.getModelInputH();
+    float scaleX = modelInputWidth == 0 ? 1f : (float) screenWidth / modelInputWidth;
+    float scaleY = modelInputHeight == 0 ? 1f : (float) screenHeight / modelInputHeight;
         
         for (TFLiteRunner.Det det : detections) {
             // Scale coordinates from model space to screen space

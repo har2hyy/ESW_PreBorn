@@ -13,8 +13,8 @@ import java.util.List;
 
 public class TFLiteRunner {
     private static final String MODEL_FILE = "best_float32.tflite";
-    private static final int MODEL_INPUT_W = 320;
-    private static final int MODEL_INPUT_H = 320;
+    private static final int MODEL_INPUT_W = 1024;
+    private static final int MODEL_INPUT_H = 1024;
     private static final int OUTPUT_SIZE_N = 2100;
 
     private final Interpreter tflite;
@@ -37,7 +37,20 @@ public class TFLiteRunner {
     public TFLiteRunner(Context ctx) throws IOException {
         Interpreter.Options opts = new Interpreter.Options();
         opts.setNumThreads(4);
-        opts.setUseNNAPI(false);
+        
+        // Enable NNAPI to leverage Qualcomm Hexagon DSP/NPU (HTP)
+        // On QIDK and Snapdragon devices, NNAPI will automatically use:
+        // 1. Hexagon DSP/HTP (NPU) - for INT8 quantized models (BEST)
+        // 2. Adreno GPU - for FP16/FP32 models
+        // 3. CPU - as fallback
+        opts.setUseNNAPI(true);
+        
+        // Optional: Set NNAPI accelerator name for specific hardware
+        // opts.setNnApiAcceleratorName("qti-dsp");  // Force Qualcomm DSP
+        // opts.setNnApiAcceleratorName("qti-gpu");  // Force Qualcomm GPU
+        // Leaving it unset lets Android choose the best accelerator
+        
+        android.util.Log.i("TFLiteRunner", "NNAPI enabled - will use Qualcomm NPU/DSP if available");
         
         tflite = new Interpreter(loadModelFile(ctx, MODEL_FILE), opts);
         

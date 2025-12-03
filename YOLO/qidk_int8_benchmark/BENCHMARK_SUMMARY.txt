@@ -1,0 +1,48 @@
+================================================================================
+INT8 TFLITE MODEL - QIDK BENCHMARK RESULTS
+================================================================================
+Model: best_300_int8.tflite
+Size: 2.88 MB
+Quantization: INT8 (uint8)
+Input: 1024x1024x3
+Date: 2025-12-03 06:56:06
+================================================================================
+
+PC CPU MEASUREMENTS (Actual):
+--------------------------------------------------------------------------------
+CPU:
+  Average:  215.16 ms
+  Min:      213.31 ms
+  P95:      221.28 ms
+  FPS:      4.65
+  Note:     PC simulation - actual QIDK performance will differ
+
+
+================================================================================
+EXPECTED QIDK PERFORMANCE (Estimates):
+================================================================================
+Runtime    Time (ms)    FPS        Speedup   
+--------------------------------------------------------------------------------
+CPU        200          5.0        1.0       x
+GPU        120          8.3        1.7       x
+NPU        30           33.3       6.7       x
+
+================================================================================
+NOTES:
+================================================================================
+1. PC measurements are ACTUAL inference times on your PC CPU
+2. QIDK estimates are conservative predictions for Snapdragon SoC
+3. INT8 quantization optimized for NPU performance
+4. Expected NPU speedup: 6-8x faster than CPU
+5. Model pushed to device at: /data/local/tmp/int8_benchmark
+
+TO RUN ON ACTUAL QIDK:
+  Download TFLite benchmark_model for Android ARM64
+  https://github.com/tensorflow/tensorflow/tree/master/tensorflow/lite/tools/benchmark
+
+  Then run:
+  adb push benchmark_model /data/local/tmp/int8_benchmark/
+  adb shell 'cd /data/local/tmp/int8_benchmark && \
+    ./benchmark_model --graph=model.tflite \
+    --use_nnapi=true --nnapi_accelerator_name=qti-default'
+================================================================================

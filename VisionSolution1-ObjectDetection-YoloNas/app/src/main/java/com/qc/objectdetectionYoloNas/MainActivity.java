@@ -20,6 +20,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -33,6 +34,7 @@ import com.google.firebase.database.ValueEventListener;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -53,7 +55,16 @@ public class MainActivity extends AppCompatActivity {
 
     private DatabaseReference detectionsRef;
     private DatabaseReference thresholdRef;
-    private float distanceThreshold = 150f;
+    // Safety distance threshold (depth units or pixels depending on mode)
+    // Default: 2.0 depth units for 3D mode, 150 pixels for 2D fallback
+    private float distanceThreshold = 2.0f;
+
+    private DepthPipelineManager depthPipelineManager;
+    private DepthPipelineManager.DepthResult lastDepthResult;
+    private SeekBar depthScaleSlider;
+    private TextView depthScaleValueText;
+    private static final float DEPTH_SCALE_MIN = 0.1f;
+    private static final float DEPTH_SCALE_MAX = 10.0f;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,6 +72,30 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.main_activity);
 
         initializeViews();
+        depthPipelineManager = new DepthPipelineManager(this);
+        
+        // Initialize depth runtime and display status
+        if (depthPipelineManager != null) {
+            if (!depthPipelineManager.isDepthAvailable()) {
+                Toast.makeText(this,
+                        "DepthAnything runtime not packaged; detection will continue without depth",
+                        Toast.LENGTH_LONG).show();
+            } else {
+                // Trigger initialization and show runtime status
+                boolean initSuccess = depthPipelineManager.ensureRuntimeReady();
+                if (initSuccess) {
+                    Toast.makeText(this,
+                            "✓ Depth model initialized - Check logcat for NPU status",
+                            Toast.LENGTH_LONG).show();
+                } else {
+                    Toast.makeText(this,
+                            "⚠ Depth initialization failed - Check logcat",
+                            Toast.LENGTH_LONG).show();
+                }
+            }
+        }
+        
+        setupDepthScaleSlider();
         initializeTFLite();
         initializeFirebase();
         checkPermissions();
@@ -77,8 +112,10 @@ public class MainActivity extends AppCompatActivity {
                 Float newThreshold = dataSnapshot.getValue(Float.class);
                 if (newThreshold != null) {
                     distanceThreshold = newThreshold;
-                    Log.i(TAG, "Updated distance threshold from Firebase: " + distanceThreshold);
-                    Toast.makeText(MainActivity.this, "Safety distance updated to " + (int)distanceThreshold + "px", Toast.LENGTH_SHORT).show();
+                    Log.i(TAG, "Updated safety distance threshold from Firebase: " + distanceThreshold);
+                    Toast.makeText(MainActivity.this, 
+                            "Safety threshold: " + String.format(Locale.US, "%.2f units", distanceThreshold), 
+                            Toast.LENGTH_SHORT).show();
                 }
             }
             @Override
@@ -102,12 +139,19 @@ public class MainActivity extends AppCompatActivity {
                 long startTime = System.currentTimeMillis();
                 List<TFLiteRunner.Det> detections = tfliteRunner.detectWithNMS(selectedBitmap, currentConfidenceThreshold, 0.4f);
                 long inferenceTime = System.currentTimeMillis() - startTime;
-                
-                Bitmap resultBitmap = processAndDrawAlerts(selectedBitmap.copy(Bitmap.Config.ARGB_8888, true), detections);
+                DepthPipelineManager.DepthResult depthResult = null;
+                if (depthPipelineManager != null) {
+                    depthResult = depthPipelineManager.estimateDepth(selectedBitmap);
+                    lastDepthResult = depthResult;
+                }
+
+                DepthPipelineManager.DepthResult finalDepthResult = depthResult;
+                Bitmap resultBitmap = processAndDrawAlerts(
+                        selectedBitmap.copy(Bitmap.Config.ARGB_8888, true), detections, finalDepthResult);
 
                 runOnUiThread(() -> {
                     imageView.setImageBitmap(resultBitmap);
-                    displayResults(detections, inferenceTime);
+                    displayResults(detections, inferenceTime, finalDepthResult);
                     runInferenceButton.setEnabled(true);
                 });
 
@@ -122,7 +166,8 @@ public class MainActivity extends AppCompatActivity {
     }
     
     // --- THIS METHOD IS NOW COMPLETE ---
-    private Bitmap processAndDrawAlerts(Bitmap bitmap, List<TFLiteRunner.Det> detections) {
+    private Bitmap processAndDrawAlerts(Bitmap bitmap, List<TFLiteRunner.Det> detections,
+                                        @Nullable DepthPipelineManager.DepthResult depthResult) {
         Canvas canvas = new Canvas(bitmap);
         Paint alertPaint = new Paint();
         alertPaint.setColor(Color.RED);
@@ -143,6 +188,17 @@ public class MainActivity extends AppCompatActivity {
             RectangleBox box = new RectangleBox(det.x1, det.y1, det.x2, det.y2, det.cls, det.score);
             box.label = (det.cls == 0) ? "worker" : (det.cls == 1) ? "truck" : "vehicle"; // Assuming class IDs
 
+            if (depthPipelineManager != null && depthPipelineManager.isDepthAvailable() && depthResult != null) {
+                float depthMeters = depthPipelineManager.sampleDepthMeters(depthResult, box.centerX, box.centerY);
+                if (Float.isFinite(depthMeters) && depthMeters >= 0f) {
+                    box.depthMeters = depthMeters;
+                } else {
+                    box.depthMeters = -1f;
+                }
+            } else {
+                box.depthMeters = -1f;
+            }
+
             allObjectsForUpload.add(box);
 
             if (box.label.equals("worker")) {
@@ -152,16 +208,54 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        // 2. Check distances and mark unsafe workers
+        // 2. Check distances and mark unsafe workers using 3D distance
         for (RectangleBox worker : workers) {
             for (RectangleBox vehicle : vehicles) {
-                float dx = worker.centerX - vehicle.centerX;
-                float dy = worker.centerY - vehicle.centerY;
-                double distance = Math.sqrt(dx * dx + dy * dy);
+                // Calculate 3D distance if depth is available for both objects
+                double distance;
+                
+                if (worker.depthMeters >= 0f && vehicle.depthMeters >= 0f) {
+                    // Use 3D distance calculation
+                    CameraCalibration.Point3D workerPoint = depthPipelineManager.projectTo3D(depthResult, worker.centerX, worker.centerY);
+                    CameraCalibration.Point3D vehiclePoint = depthPipelineManager.projectTo3D(depthResult, vehicle.centerX, vehicle.centerY);
+                    
+                    if (workerPoint != null && vehiclePoint != null) {
+                        // Calculate 3D Euclidean distance in depth units
+                        float dx3d = workerPoint.x - vehiclePoint.x;
+                        float dy3d = workerPoint.y - vehiclePoint.y;
+                        float dz3d = workerPoint.z - vehiclePoint.z;
+                        distance = Math.sqrt(dx3d * dx3d + dy3d * dy3d + dz3d * dz3d);
+                        
+                        // Use Firebase-configurable threshold (default 2.0, can be updated remotely)
+                        // This applies to 3D distance in depth units
+                        float safetyThreshold = distanceThreshold;
+                        
+                        if (distance < safetyThreshold) {
+                            worker.isUnsafe = true;
+                            worker.realDistance3D = (float) distance; // Store for display
+                            break;
+                        }
+                    } else {
+                        // Fallback to 2D pixel distance if 3D projection failed
+                        float dx = worker.centerX - vehicle.centerX;
+                        float dy = worker.centerY - vehicle.centerY;
+                        distance = Math.sqrt(dx * dx + dy * dy);
+                        
+                        if (distance < distanceThreshold) {
+                            worker.isUnsafe = true;
+                            break;
+                        }
+                    }
+                } else {
+                    // Fallback to 2D pixel distance if depth unavailable
+                    float dx = worker.centerX - vehicle.centerX;
+                    float dy = worker.centerY - vehicle.centerY;
+                    distance = Math.sqrt(dx * dx + dy * dy);
 
-                if (distance < distanceThreshold) {
-                    worker.isUnsafe = true;
-                    break;
+                    if (distance < distanceThreshold) {
+                        worker.isUnsafe = true;
+                        break;
+                    }
                 }
             }
         }
@@ -169,17 +263,36 @@ public class MainActivity extends AppCompatActivity {
         // 3. Draw dots on the canvas based on safety status
         for (RectangleBox box : allObjectsForUpload) {
              if (box.label.equals("worker")) {
-                 if (box.isUnsafe) {
-                    canvas.drawCircle(box.centerX, box.centerY, 25f, alertPaint);
-                    canvas.drawText("ALERT!", box.centerX + 30, box.centerY, alertPaint);
-                 } else {
-                    canvas.drawCircle(box.centerX, box.centerY, 15f, safePaint);
-                 }
+                      if (box.isUnsafe) {
+                          canvas.drawCircle(box.centerX, box.centerY, 25f, alertPaint);
+                          canvas.drawText("ALERT!", box.centerX + 30, box.centerY, alertPaint);
+                          
+                          // Show 3D distance if available
+                          if (box.realDistance3D >= 0f) {
+                              canvas.drawText(String.format(Locale.US, "⚠ %.2f units", box.realDistance3D),
+                                      box.centerX + 30, box.centerY + 20, alertPaint);
+                          }
+                      } else {
+                          canvas.drawCircle(box.centerX, box.centerY, 15f, safePaint);
+                      }
+                if (box.depthMeters >= 0f) {
+                            canvas.drawText(String.format(Locale.US, "Depth: %.2f", box.depthMeters),
+                                      box.centerX + 30, box.centerY + 40, safePaint);
+                      }
              } else {
                  // Optionally draw blue dots for vehicles
                  Paint vehiclePaint = new Paint();
                  vehiclePaint.setColor(Color.BLUE);
                  canvas.drawCircle(box.centerX, box.centerY, 15f, vehiclePaint);
+                 
+                 // Show vehicle depth
+                 if (box.depthMeters >= 0f) {
+                     Paint depthPaint = new Paint();
+                     depthPaint.setColor(Color.CYAN);
+                     depthPaint.setTextSize(35f);
+                     canvas.drawText(String.format(Locale.US, "%.2f", box.depthMeters),
+                             box.centerX + 20, box.centerY + 30, depthPaint);
+                 }
              }
         }
 
@@ -201,6 +314,8 @@ public class MainActivity extends AppCompatActivity {
         runInferenceButton = findViewById(R.id.runInferenceButton);
         confidenceSlider = findViewById(R.id.confidenceSlider);
         confidenceValueText = findViewById(R.id.confidenceValueText);
+        depthScaleSlider = findViewById(R.id.depthScaleSlider);
+        depthScaleValueText = findViewById(R.id.depthScaleValueText);
         selectImageButton.setOnClickListener(v -> openGallery());
         runInferenceButton.setOnClickListener(v -> runInference());
         runInferenceButton.setEnabled(false);
@@ -284,13 +399,73 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
-    private void displayResults(List<TFLiteRunner.Det> detections, long inferenceTime) {
+
+    private void setupDepthScaleSlider() {
+        if (depthScaleSlider == null) {
+            return;
+        }
+        boolean depthAvailable = depthPipelineManager != null && depthPipelineManager.isDepthAvailable();
+        depthScaleSlider.setEnabled(depthAvailable);
+        if (!depthAvailable) {
+            updateDepthScaleLabel(Float.NaN);
+            return;
+        }
+        depthScaleSlider.setMax(100);
+        float initialScale = depthPipelineManager != null ? depthPipelineManager.getDepthScaleMeters() : 2.0f;
+        int initialProgress = (int) (((initialScale - DEPTH_SCALE_MIN) / (DEPTH_SCALE_MAX - DEPTH_SCALE_MIN)) * depthScaleSlider.getMax());
+        depthScaleSlider.setProgress(Math.max(0, Math.min(depthScaleSlider.getMax(), initialProgress)));
+        updateDepthScaleLabel(initialScale);
+
+        depthScaleSlider.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                float fraction = progress / (float) seekBar.getMax();
+                float scale = DEPTH_SCALE_MIN + fraction * (DEPTH_SCALE_MAX - DEPTH_SCALE_MIN);
+                if (depthPipelineManager != null) {
+                    depthPipelineManager.setDepthScaleMeters(scale);
+                }
+                updateDepthScaleLabel(scale);
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {}
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                if (depthPipelineManager != null) {
+                    Toast.makeText(MainActivity.this,
+                            String.format(Locale.US, "Depth scale set to %.2f", depthPipelineManager.getDepthScaleMeters()),
+                            Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+    }
+
+    private void updateDepthScaleLabel(float scaleMeters) {
+        if (depthScaleValueText != null) {
+            if (Float.isNaN(scaleMeters)) {
+                depthScaleValueText.setText("N/A");
+            } else {
+                depthScaleValueText.setText(String.format(Locale.US, "%.2f", scaleMeters));
+            }
+        }
+    }
+    private void displayResults(List<TFLiteRunner.Det> detections, long inferenceTime,
+                                @Nullable DepthPipelineManager.DepthResult depthResult) {
         String[] classNames = {"worker", "truck", "class2", "class3", "class4"};
         StringBuilder results = new StringBuilder();
         results.append("Detection Results:\n");
         results.append("Confidence Threshold: ").append(String.format("%.2f", currentConfidenceThreshold)).append("\n");
         results.append("Inference Time: ").append(inferenceTime).append("ms\n");
         results.append("Objects Found: ").append(detections.size()).append("\n\n");
+    if (depthResult != null && depthPipelineManager != null && depthPipelineManager.isDepthAvailable()) {
+            results.append(String.format(Locale.US,
+                    "Depth Inference: %d ms (min=%.3f, max=%.3f)\n",
+                    depthResult.inferenceTimeMs, depthResult.minValue, depthResult.maxValue));
+            results.append(String.format(Locale.US,
+                    "Depth Scale: %.2f m @ depth=1.0\n\n",
+                    depthPipelineManager.getDepthScaleMeters()));
+        }
         for (int i = 0; i < detections.size(); i++) {
             TFLiteRunner.Det det = detections.get(i);
             String className = (det.cls < classNames.length) ?
@@ -301,6 +476,21 @@ public class MainActivity extends AppCompatActivity {
             float centerX = (det.x1 + det.x2) / 2;
             float centerY = (det.y1 + det.y2) / 2;
             results.append(String.format("  Center: [%.1f, %.1f]\n\n", centerX, centerY));
+            if (depthResult != null && depthPipelineManager != null && depthPipelineManager.isDepthAvailable()) {
+                float normalizedDepth = depthResult.sampleNormalizedDepth(centerX, centerY);
+                float depthMeters = depthPipelineManager.sampleDepthMeters(depthResult, centerX, centerY);
+                if (Float.isFinite(depthMeters) && depthMeters >= 0f) {
+                    results.append(String.format(Locale.US,
+                            "  Depth: %.2f m (norm=%.3f)\n", depthMeters, normalizedDepth));
+                    CameraCalibration.Point3D point3D = depthPipelineManager.projectTo3D(depthResult, centerX, centerY);
+                    if (point3D != null) {
+                        results.append(String.format(Locale.US,
+                                "  3D Position: (%.2f, %.2f, %.2f) m\n",
+                                point3D.x, point3D.y, point3D.z));
+                    }
+                    results.append("\n");
+                }
+            }
         }
         if (detections.isEmpty()) {
             results.append("No objects detected above confidence threshold.");

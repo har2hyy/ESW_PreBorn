@@ -1,0 +1,128 @@
+{
+  "image": "test_detection_v2.jpg",
+  "model": "best_yolo11_300_int8.tflite",
+  "quantization": "INT8 (uint8)",
+  "total_detections": 8,
+  "detections": [
+    {
+      "class": "worker",
+      "class_id": 0,
+      "confidence": 0.5,
+      "bbox": [
+        256.0,
+        256.0,
+        768.0,
+        768.0
+      ],
+      "center": [
+        512.0,
+        512.0
+      ]
+    },
+    {
+      "class": "worker",
+      "class_id": 0,
+      "confidence": 0.5,
+      "bbox": [
+        512.0,
+        256.0,
+        1024.0,
+        768.0
+      ],
+      "center": [
+        768.0,
+        512.0
+      ]
+    },
+    {
+      "class": "worker",
+      "class_id": 0,
+      "confidence": 0.5,
+      "bbox": [
+        768.0,
+        0.0,
+        1024.0,
+        1024.0
+      ],
+      "center": [
+        896.0,
+        512.0
+      ]
+    },
+    {
+      "class": "worker",
+      "class_id": 0,
+      "confidence": 0.5,
+      "bbox": [
+        512.0,
+        512.0,
+        1024.0,
+        1024.0
+      ],
+      "center": [
+        768.0,
+        768.0
+      ]
+    },
+    {
+      "class": "worker",
+      "class_id": 0,
+      "confidence": 0.5,
+      "bbox": [
+        256.0,
+        512.0,
+        768.0,
+        1024.0
+      ],
+      "center": [
+        512.0,
+        768.0
+      ]
+    },
+    {
+      "class": "worker",
+      "class_id": 0,
+      "confidence": 0.5,
+      "bbox": [
+        768.0,
+        768.0,
+        1024.0,
+        1024.0
+      ],
+      "center": [
+        896.0,
+        896.0
+      ]
+    },
+    {
+      "class": "worker",
+      "class_id": 0,
+      "confidence": 0.5,
+      "bbox": [
+        0.0,
+        0.0,
+        1024.0,
+        1024.0
+      ],
+      "center": [
+        512.0,
+        512.0
+      ]
+    },
+    {
+      "class": "worker",
+      "class_id": 0,
+      "confidence": 0.5,
+      "bbox": [
+        0.0,
+        768.0,
+        1024.0,
+        1024.0
+      ],
+      "center": [
+        512.0,
+        896.0
+      ]
+    }
+  ]
+}

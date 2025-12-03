@@ -7,7 +7,7 @@
 using namespace cv;
 #include <jni.h>
 #include <string>
-#include <iostream>
+#include <vector>
 #include <android/asset_manager.h>
 #include <android/asset_manager_jni.h>
 
@@ -17,139 +17,86 @@ using namespace cv;
 #include "zdl/SNPE/SNPE.hpp"
 #include "zdl/SNPE/SNPEFactory.hpp"
 
+namespace {
+    constexpr const char* kDepthDlcAsset = "depth_anything_v2.dlc";
+}
+
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_qc_objectdetectionYoloNas_SNPEHelper_queryRuntimes(
+Java_com_qc_objectdetectionYoloNas_DepthSnpeBridge_nativeInit(
         JNIEnv* env,
         jobject /* this */,
-        jstring native_dir_path) {
-    const char *cstr = env->GetStringUTFChars(native_dir_path, nullptr);
-    env->ReleaseStringUTFChars(native_dir_path, cstr);
+        jobject asset_manager,
+        jstring native_lib_path,
+        jchar runtime_char) {
 
-    std::string runT_Status;
-    std::string nativeLibPath = std::string(cstr);
-
-//    runT_Status += "\nLibs Path : " + nativeLibPath + "\n";
-
-    if (!SetAdspLibraryPath(nativeLibPath)) {
-        __android_log_print(ANDROID_LOG_INFO, "SNPE ", "Failed to set ADSP Library Path\n");
-
-        runT_Status += "\nFailed to set ADSP Library Path\nTerminating";
-        return env->NewStringUTF(runT_Status.c_str());
+    const char *nativePath = env->GetStringUTFChars(native_lib_path, nullptr);
+    std::string initLog;
+    if (!SetAdspLibraryPath(nativePath)) {
+        initLog = "Failed to set ADSP library path";
+        env->ReleaseStringUTFChars(native_lib_path, nativePath);
+        return env->NewStringUTF(initLog.c_str());
     }
-
-    // ====================================================================================== //
-    runT_Status = "Querying Runtimes : \n\n";
-    // DSP unsignedPD check
-    if (!zdl::SNPE::SNPEFactory::isRuntimeAvailable(zdl::DlSystem::Runtime_t::DSP,zdl::DlSystem::RuntimeCheckOption_t::UNSIGNEDPD_CHECK)) {
-        __android_log_print(ANDROID_LOG_INFO, "SNPE ", "UnsignedPD DSP runtime : Absent\n");
-        runT_Status += "UnsignedPD DSP runtime : Absent\n";
-    }
-    else {
-        __android_log_print(ANDROID_LOG_INFO, "SNPE ", "UnsignedPD DSP runtime : Present\n");
-        runT_Status += "UnsignedPD DSP runtime : Present\n";
-    }
-    // DSP signedPD check
-    if (!zdl::SNPE::SNPEFactory::isRuntimeAvailable(zdl::DlSystem::Runtime_t::DSP)) {
-        __android_log_print(ANDROID_LOG_INFO, "SNPE ", "DSP runtime : Absent\n");
-        runT_Status += "DSP runtime : Absent\n";
-    }
-    else {
-        __android_log_print(ANDROID_LOG_INFO, "SNPE ", "DSP runtime : Present\n");
-        runT_Status += "DSP runtime : Present\n";
-    }
-    // GPU check
-    if (!zdl::SNPE::SNPEFactory::isRuntimeAvailable(zdl::DlSystem::Runtime_t::GPU)) {
-        __android_log_print(ANDROID_LOG_INFO, "SNPE ", "GPU runtime : Absent\n");
-        runT_Status += "GPU runtime : Absent\n";
-    }
-    else {
-        __android_log_print(ANDROID_LOG_INFO, "SNPE ", "GPU runtime : Present\n");
-        runT_Status += "GPU runtime : Present\n";
-    }
-    // CPU check
-    if (!zdl::SNPE::SNPEFactory::isRuntimeAvailable(zdl::DlSystem::Runtime_t::CPU)) {
-        __android_log_print(ANDROID_LOG_INFO, "SNPE ", "CPU runtime : Absent\n");
-        runT_Status += "CPU runtime : Absent\n";
-    }
-    else {
-        __android_log_print(ANDROID_LOG_INFO, "SNPE ", "CPU runtime : Present\n");
-        runT_Status += "CPU runtime : Present\n";
-    }
-
-    return env->NewStringUTF(runT_Status.c_str());
-}
-
-
-
-//initializing network
-extern "C"
-JNIEXPORT jstring JNICALL
-Java_com_qc_objectdetectionYoloNas_SNPEHelper_initSNPE(JNIEnv *env, jobject thiz, jobject asset_manager, jchar runtime) {
-    LOGI("Reading SNPE DLC ...");
-    std::string result;
+    env->ReleaseStringUTFChars(native_lib_path, nativePath);
 
     AAssetManager* mgr = AAssetManager_fromJava(env, asset_manager);
-    AAsset* asset_BB = AAssetManager_open(mgr, "Quant_yoloNas_s_320.dlc", AASSET_MODE_UNKNOWN);
-    if (NULL == asset_BB) {
-        LOGE("Failed to load ASSET, needed to load DLC\n");
-        result = "Failed to load ASSET, needed to load DLC\n";
-        return env->NewStringUTF(result.c_str());
+    AAsset* asset = AAssetManager_open(mgr, kDepthDlcAsset, AASSET_MODE_UNKNOWN);
+    if (asset == nullptr) {
+        initLog = "Failed to open depth DLC";
+        return env->NewStringUTF(initLog.c_str());
     }
 
-    long dlc_size_BB = AAsset_getLength(asset_BB);
-    LOGI("DLC BB Size = %ld MB\n", dlc_size_BB / (1024*1024));
-    result += "DLC BB Size = " + std::to_string(dlc_size_BB);
-    char* dlc_buffer_BB = (char*) malloc(sizeof(char) * dlc_size_BB);
-    AAsset_read(asset_BB, dlc_buffer_BB, dlc_size_BB);
+    const off_t dlcSize = AAsset_getLength(asset);
+    std::vector<char> buffer(static_cast<size_t>(dlcSize));
+    AAsset_read(asset, buffer.data(), dlcSize);
+    AAsset_close(asset);
 
-    result += "\n\nBuilding Models DLC Network:\n";
-    result += build_network_BB(reinterpret_cast<const uint8_t *>(dlc_buffer_BB), dlc_size_BB,runtime);
-
-    return env->NewStringUTF(result.c_str());
+    initLog = build_depth_network(reinterpret_cast<const uint8_t*>(buffer.data()), dlcSize, runtime_char);
+    return env->NewStringUTF(initLog.c_str());
 }
 
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_qc_objectdetectionYoloNas_DepthSnpeBridge_nativeInferDepth(
+        JNIEnv* env,
+        jobject /* this */,
+        jintArray rgbaPixels,
+        jint width,
+        jint height,
+        jfloatArray depthBuffer,
+        jfloatArray statsBuffer) {
 
-//inference
-extern "C"
-JNIEXPORT jint JNICALL
-Java_com_qc_objectdetectionYoloNas_SNPEHelper_inferSNPE(JNIEnv *env, jobject thiz, jlong inputMat, jint actual_width, jint actual_height,
-                                               jobjectArray jboxcoords, jobjectArray objnames) {
-
-    LOGI("infer SNPE S");
-
-    cv::Mat &img = *(cv::Mat*) inputMat;
-    std::string bs;
-    int numberofobj = 0;
-    std::vector<std::vector<float>> BB_coords;
-    std::vector<std::string> BB_names;
-
-    bool status = executeDLC(img,actual_width, actual_height, numberofobj, BB_coords, BB_names);
-
-    if(numberofobj ==0)
-        {
-        LOGI("No object detected");
+    const int pixelCount = width * height;
+    if (env->GetArrayLength(depthBuffer) < pixelCount || env->GetArrayLength(statsBuffer) < 2) {
+        LOGE("Output buffers too small");
+        return JNI_FALSE;
     }
-    else if(status == false)
-    {
-        LOGE("fatal ERROR");
-        return 0;
+
+    jint *pixels = env->GetIntArrayElements(rgbaPixels, nullptr);
+    if (pixels == nullptr) {
+        LOGE("Failed to access pixel buffer");
+        return JNI_FALSE;
     }
-    else {
-        //LOGI("number of detected objects: %d",numberofobj);
 
-        for (int z = 0; z < numberofobj; z++){
-            jfloatArray boxcoords = (jfloatArray) env->GetObjectArrayElement(jboxcoords, z);
-            env->SetObjectArrayElement(objnames, z,env->NewStringUTF(BB_names[z].data()));
-
-
-            float tempbox[5]; //4 coords and 1 processing time
-            for(int k=0;k<5;k++)
-                tempbox[k]=BB_coords[z][k];
-            env->SetFloatArrayRegion(boxcoords,0,5,tempbox);
-        }
-        //LOGI("executeDLC_returned successfully");
+    cv::Mat rgba(height, width, CV_8UC4);
+    unsigned char *dst = rgba.data;
+    for (int i = 0; i < pixelCount; ++i) {
+        unsigned int color = static_cast<unsigned int>(pixels[i]);
+        dst[4 * i + 0] = (color >> 16) & 0xFF; // R
+        dst[4 * i + 1] = (color >> 8) & 0xFF;  // G
+        dst[4 * i + 2] = (color) & 0xFF;       // B
+        dst[4 * i + 3] = (color >> 24) & 0xFF; // A
     }
-    //LOGD("infer SNPE E");
-    return numberofobj;
+    env->ReleaseIntArrayElements(rgbaPixels, pixels, 0);
 
+    std::vector<float> normalized;
+    float minValue = 0.f;
+    float maxValue = 0.f;
+
+    if (!execute_depth(rgba, width, height, normalized, minValue, maxValue)) {
+        return JNI_FALSE;
+    }
+
+    env->SetFloatArrayRegion(depthBuffer, 0, pixelCount, normalized.data());
+    float stats[2] = {minValue, maxValue};
+    env->SetFloatArrayRegion(statsBuffer, 0, 2, stats);
+    return JNI_TRUE;
 }

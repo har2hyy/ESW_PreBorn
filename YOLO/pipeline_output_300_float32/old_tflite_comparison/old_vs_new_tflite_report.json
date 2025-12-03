@@ -1,0 +1,51 @@
+{
+  "my_optimal_result.jpg": {
+    "pytorch": {
+      "total": 26,
+      "classes": {
+        "truck": 11,
+        "bulldozer": 4,
+        "worker": 11
+      }
+    },
+    "old_tflite": {
+      "total": 81,
+      "classes": {
+        "worker": 79,
+        "truck": 2
+      }
+    },
+    "new_tflite": {
+      "total": 24,
+      "classes": {
+        "bulldozer": 11,
+        "worker": 8,
+        "truck": 5
+      }
+    }
+  },
+  "onnx_detection_1024_test.jpg": {
+    "pytorch": {
+      "total": 43,
+      "classes": {
+        "bulldozer": 27,
+        "truck": 10,
+        "worker": 6
+      }
+    },
+    "old_tflite": {
+      "total": 169,
+      "classes": {
+        "worker": 169
+      }
+    },
+    "new_tflite": {
+      "total": 51,
+      "classes": {
+        "bulldozer": 33,
+        "worker": 15,
+        "truck": 3
+      }
+    }
+  }
+}

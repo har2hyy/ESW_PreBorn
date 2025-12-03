@@ -1,0 +1,20 @@
+{
+  "timestamp": "2025-12-03 07:11:31",
+  "model": "models/300/best_300_int8.tflite",
+  "warmup_runs": 10,
+  "num_runs": 50,
+  "results": [
+    {
+      "name": "CPU",
+      "time_us": 74436.2,
+      "time_ms": 74.4362,
+      "fps": 13.434323622108598
+    },
+    {
+      "name": "NNAPI (Auto)",
+      "time_us": 78610.3,
+      "time_ms": 78.61030000000001,
+      "fps": 12.720979311871343
+    }
+  ]
+}

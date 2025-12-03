@@ -87,6 +87,47 @@
 
     </LinearLayout>
 
+    <!-- Depth Scale Slider -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginBottom="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="8dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Depth Scale Factor"
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/depthScaleValueText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="2.00"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:minWidth="60dp" />
+
+        </LinearLayout>
+
+        <SeekBar
+            android:id="@+id/depthScaleSlider"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="100"
+            android:progress="40" />
+
+    </LinearLayout>
+
     <!-- Buttons -->
     <LinearLayout
         android:layout_width="match_parent"

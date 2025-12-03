@@ -17,6 +17,8 @@ public class RectangleBox {
     public int fps;
     public String processing_time;
     public String label;
+    public float depthMeters = -1f;
+    public float realDistance3D = -1f; // 3D distance to nearest vehicle (meters)
 
     // --- NEW fields for alert logic and Firebase ---
     public float centerX;

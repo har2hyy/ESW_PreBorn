@@ -1,0 +1,27 @@
+/usr/bin/bash: /home/harshyy/miniconda3/envs/snpe310/lib/libtinfo.so.6: no version information available (required by /usr/bin/bash)
+2025-12-02 15:53:17,821 - 278 - INFO - Input shape info 
+2025-12-02 15:53:18,272 - 283 - WARNING - Symbolic shape inference Failed. Exception: Onnxruntime package not found in current environment. Symbolic Shape Inference will be skipped.. Running normal shape inference.
+2025-12-02 15:53:18,736 - 283 - WARNING - Onnx model simplification failed due to: No module named 'onnxsim'
+2025-12-02 15:53:18,736 - 283 - WARNING - Simplified model validation failed
+2025-12-02 15:53:19,162 - 283 - WARNING - Onnx model simplification failed due to: No module named 'onnxsim'
+2025-12-02 15:53:19,162 - 283 - WARNING - Simplified model validation failed
+Traceback (most recent call last):
+  File "/home/harshyy/snpe-sdk/2.40.0.251030/lib/python/qti/aisw/converters/onnx/onnx_to_ir.py", line 713, in convert
+    self.translations.apply_method_to_op(src_type,
+  File "/home/harshyy/snpe-sdk/2.40.0.251030/lib/python/qti/aisw/converters/common/converter_ir/translation.py", line 67, in apply_method_to_op
+    return translation.apply_method(method_name, *args, **kwargs)
+  File "/home/harshyy/snpe-sdk/2.40.0.251030/lib/python/qti/aisw/converters/common/converter_ir/translation.py", line 20, in apply_method
+    return self.indexed_methods[method_name](*args, **kwargs)
+  File "/home/harshyy/snpe-sdk/2.40.0.251030/lib/python/qti/aisw/converters/onnx/onnx_translations.py", line 450, in add_op
+    return graph.add_chained_eltwise_ops(op.operation, str(src_op.name), self.input_names, output_names[0])
+  File "/home/harshyy/snpe-sdk/2.40.0.251030/lib/python/qti/aisw/converters/common/converter_ir/op_graph.py", line 1607, in add_chained_eltwise_ops
+    node = self.add(new_ir_op, src_input_names, src_output_name)
+  File "/home/harshyy/snpe-sdk/2.40.0.251030/lib/python/qti/aisw/converters/common/converter_ir/op_graph.py", line 1558, in add
+    output_shapes = op.infer_shape(input_shapes, input_axis_formats, len(output_names), self.src_axis_order)
+  File "/home/harshyy/snpe-sdk/2.40.0.251030/lib/python/qti/aisw/converters/common/converter_ir/op_adapter.py", line 2733, in infer_shape
+    return self.infer_shape_c_op_wrapper(input_shapes, input_axis_formats, num_outputs, axis_order)
+  File "/home/harshyy/snpe-sdk/2.40.0.251030/lib/python/qti/aisw/converters/common/converter_ir/op_adapter.py", line 722, in infer_shape_c_op_wrapper
+    out_ir_shapes = self.c_op.infer_output_shapes(AxisOrders.python_to_c_axis_orders(axis_order), num_outputs)
+ValueError: getBroadcastedTensorShape: Unable to broadcast shapes: IrTensorShape(dims = [1,3826037880,10336,0] , dy_axes=[]) and IrTensorShape(dims = [1,16,6,0] , dy_axes=[])
+2025-12-02 15:53:19,254 - 273 - ERROR - Node /model.2/m.0/Add: getBroadcastedTensorShape: Unable to broadcast shapes: IrTensorShape(dims = [1,3826037880,10336,0] , dy_axes=[]) and IrTensorShape(dims = [1,16,6,0] , dy_axes=[])
+ERROR conda.cli.main_run:execute(127): `conda run snpe-onnx-to-dlc --input_network ./models/onnx/best_clean.onnx --output_path ./models/onnx/best.dlc` failed. (See above for error)

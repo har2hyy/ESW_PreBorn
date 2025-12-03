@@ -1,0 +1,27 @@
+============================================================
+QIDK ON-DEVICE ACTUAL BENCHMARK RESULTS
+============================================================
+
+Model: models/300/best_300_int8.tflite
+Date: 2025-12-03 07:11:31
+Warmup Runs: 10
+Measurement Runs: 50
+
+RESULTS (ACTUAL MEASUREMENTS ✅):
+------------------------------------------------------------
+
+Platform: CPU
+  Time:    74.44 ms
+  FPS:     13.43
+  Speedup: 1.00x vs CPU
+
+Platform: NNAPI (Auto)
+  Time:    78.61 ms
+  FPS:     12.72
+  Speedup: 0.95x vs CPU
+
+============================================================
+🏆 BEST PERFORMER: CPU
+   Time: 74.44 ms (13.43 FPS)
+   ⚠️  Below 25 FPS threshold
+============================================================
