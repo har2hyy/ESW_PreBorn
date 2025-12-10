@@ -1,0 +1,20 @@
+{
+  "rules": {
+    "detections": {
+      ".read": "auth != null",
+      ".write": true
+    },
+    "config": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "alerts": {
+      ".read": "auth != null",
+      ".write": true
+    },
+    "emailQueue": {
+      ".read": "auth != null",
+      ".write": true
+    }
+  }
+}

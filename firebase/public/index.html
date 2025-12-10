@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Preborn - Safety Dashboard</title>
+    <link rel="stylesheet" href="alerts.css">
+    <style>
+        :root {
+            /* Light theme (default) */
+            --bg-color: #f4f6f8;
+            --text-primary: #333;
+            --text-secondary: #666;
+            --card-bg: #ffffff;
+            --card-shadow: rgba(0, 0, 0, 0.1);
+            --chart-title-color: #333;
+        }
+
+        [data-theme="dark"] {
+            /* Dark theme */
+            --bg-color: #0a0a0f;
+            --text-primary: #f0f0f5;
+            --text-secondary: #a0a0b0;
+            --card-bg: #1a1a25;
+            --card-shadow: rgba(0, 0, 0, 0.5);
+            --chart-title-color: #f0f0f5;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            min-height: 100vh;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            background-size: 200% 100%;
+            animation: headerGradient 10s ease infinite;
+            color: white;
+            padding: 20px 40px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+        }
+        
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+        }
+        
+        @keyframes headerGradient {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .logo h1 {
+            font-size: 2.2em;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+        }
+        
+        .logo h1 .pre {
+            color: white;
+        }
+        
+        .logo h1 .born {
+            color: #f093fb;
+            font-weight: 700;
+        }
+        
+        .subtitle {
+            font-size: 0.95em;
+            opacity: 0.9;
+        }
+        
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .theme-toggle {
+            background-color: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50px;
+            padding: 10px 18px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.1em;
+            color: white;
+        }
+
+        .theme-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 15px;
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+        }
+        
+        .user-email {
+            font-size: 0.9em;
+        }
+        
+        .logout-btn {
+            padding: 10px 20px;
+            background-color: white;
+            color: #667eea;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .logout-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* Main Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px 40px;
+        }
+        
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background-color: var(--card-bg);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px var(--card-shadow);
+            transition: transform 0.2s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 4px 16px var(--card-shadow);
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+        
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        .stat-value.safe {
+            color: #4caf50;
+        }
+        
+        .stat-value.danger {
+            color: #f44336;
+        }
+        
+        .stat-value.info {
+            color: #2196f3;
+        }
+        
+        /* Chart Container */
+        #chartContainer { 
+            background-color: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px var(--card-shadow);
+            margin-bottom: 30px;
+        }
+        
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .chart-title {
+            font-size: 1.5em;
+            font-weight: 600;
+            color: var(--chart-title-color);
+        }
+
+        /* 3D Chart Container */
+        #depthChart3DContainer {
+            background-color: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px var(--card-shadow);
+            margin-bottom: 30px;
+        }
+
+        .view-3d-btn {
+            display: inline-block;
+            padding: 15px 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            font-size: 1.2em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .view-3d-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+        
+        .chart-legend {
+            display: flex;
+            gap: 20px;
+            font-size: 0.9em;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+        }
+        
+        /* Controls */
+        #controls { 
+            background-color: var(--card-bg);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px var(--card-shadow);
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            justify-content: center;
+        }
+        
+        #controls label {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        input[type="range"] {
+            cursor: pointer;
+            width: 300px;
+            height: 8px;
+            border-radius: 5px;
+            background: #ddd;
+            outline: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            border: none;
+        }
+        
+        #thresholdValue {
+            font-weight: bold;
+            color: #667eea;
+            font-size: 1.2em;
+            min-width: 80px;
+            text-align: center;
+        }
+        
+        /* Loading State */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- Header -->
+    <div class="header">
+        <div class="header-left">
+            <div class="logo">
+                <h1><span class="pre">Pre</span><span class="born">Born</span></h1>
+                <div class="subtitle">Construction Safety Monitoring System</div>
+            </div>
+        </div>
+        <div class="header-right">
+            <button class="theme-toggle" id="themeToggle">
+                <span id="themeIcon">🌙</span>
+                <span id="themeText">Dark</span>
+            </button>
+            <div class="user-info">
+                <span>👤</span>
+                <span class="user-email" id="userEmail">Loading...</span>
+            </div>
+            <button class="logout-btn" id="logoutBtn">Sign Out</button>
+        </div>
+    </div>
+
+    <!-- Alert Notifications Container -->
+    <div id="alertContainer" class="alert-container"></div>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Stats Cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Total Workers</div>
+                <div class="stat-value" id="totalWorkers">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Safe Workers</div>
+                <div class="stat-value safe" id="safeWorkers">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">⚠️ Unsafe Workers</div>
+                <div class="stat-value danger" id="unsafeWorkers">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Active Equipment</div>
+                <div class="stat-value info" id="totalEquipment">0</div>
+            </div>
+        </div>
+
+        <!-- Chart Container -->
+        <div id="chartContainer">
+            <div class="chart-header">
+                <h2 class="chart-title">Live Site Monitoring</h2>
+                <div class="chart-legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #006400;"></div>
+                        <span>Safe Worker</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #ff0000;"></div>
+                        <span>Unsafe Worker</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #0000ff;"></div>
+                        <span>Machinery</span>
+                    </div>
+                </div>
+            </div>
+            <canvas id="myChart"></canvas>
+        </div>
+
+        <!-- 3D Depth Visualization Link -->
+        <div id="depthChart3DContainer">
+            <div class="chart-header">
+                <h2 class="chart-title">3D Depth Visualization</h2>
+            </div>
+            <div style="text-align: center; padding: 40px;">
+                <p style="margin-bottom: 20px; color: var(--text-secondary); font-size: 1.1em;">View the interactive 3D depth map of the construction site</p>
+                <a href="depth_visualization.html" target="_blank" class="view-3d-btn">
+                    📊 Open 3D Depth Map
+                </a>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div id="controls">
+            <label for="thresholdSlider">Safety Distance Threshold:</label>
+            <input type="range" id="thresholdSlider" min="50" max="500" value="150">
+            <span id="thresholdValue">150px</span>
+        </div>
+
+        <!-- Alert History -->
+        <div class="alert-history">
+            <h2>
+                Alert History
+                <span class="alert-count" id="alertCount">0</span>
+            </h2>
+            <div id="alertList" class="alert-list">
+                <div class="no-alerts">
+                    <div class="no-alerts-icon">✓</div>
+                    <div>No alerts yet. System is monitoring...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script>
+        // Theme Toggle Functionality
+        const themeToggle = document.getElementById('themeToggle');
+        const themeIcon = document.getElementById('themeIcon');
+        const themeText = document.getElementById('themeText');
+        const html = document.documentElement;
+
+        // Load saved theme from localStorage
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        html.setAttribute('data-theme', savedTheme);
+        updateThemeButton(savedTheme);
+
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeButton(newTheme);
+        });
+
+        function updateThemeButton(theme) {
+            if (theme === 'dark') {
+                themeIcon.textContent = '☀️';
+                themeText.textContent = 'Light';
+            } else {
+                themeIcon.textContent = '🌙';
+                themeText.textContent = 'Dark';
+            }
+        }
+    </script>
+    
+    <script type="module" src="app.js"></script>
+    
+</body>
+</html>

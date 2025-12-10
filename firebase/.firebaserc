@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "default": "worker-detection-and-safety",
+    "worker-detection": "worker-detection-and-safety"
+  },
+  "targets": {},
+  "etags": {}
+}
